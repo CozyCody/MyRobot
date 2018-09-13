@@ -12,18 +12,18 @@ boolean movingForward;
      * PaintingRobot's run method - Seesaw
      */
     public void run() {
-        while (true) {
-            setAhead(40000);
-            movingForward = true;
 
-            setTurnRight(50);
-            waitFor(new TurnCompleteCondition(this));
-            setTurnLeft(90);
-            turnGunRight(1080);
-            waitFor(new TurnCompleteCondition(this));
-            setTurnRight(190);
-            turnGunRight(1080);
-            waitFor(new TurnCompleteCondition(this));
+        setAdjustGunForRobotTurn(false);
+        setAdjustRadarForGunTurn(false);
+        setAdjustRadarForRobotTurn(false);
+
+        while (true) {
+
+
+            setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+
+            // Targeting code here
+
 
         }
     }
@@ -33,20 +33,17 @@ boolean movingForward;
     }
 
     public void reverseDirection() {
-        if (movingForward) {
-            setBack(40000);
-            movingForward = false;
-        } else {
-            setAhead(40000);
-            movingForward = true;
-        }
+
     }
     /**
      * Fire when we see a robot
      */
     public void onScannedRobot(ScannedRobotEvent e) {
         // demonstrate feature of debugging properties on RobotDialog
-        setDebugProperty("lastScannedRobot", e.getName() + " at " + e.getBearing() + " degrees at time " + getTime());
+        setTurnRadarLeftRadians(getRadarTurnRemainingRadians());
+
+        // Targeting code here?
+        // getX(), getY()
 
         fire(2);
     }
