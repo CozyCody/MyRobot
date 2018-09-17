@@ -1,86 +1,86 @@
 package ca;
-
-
 import robocode.*;
-
-import java.awt.*;
+import robocode.util.Utils;
+import java.awt.geom.*;
 
 
 public class Cody extends AdvancedRobot {
-boolean movingForward;
-    /**
-     * PaintingRobot's run method - Seesaw
-     */
+    static final double MAX_VELOCITY = 8;
+    static final double WALL_MARGIN = 25;
+    Point2D robotLocation;
+    Point2D enemyLocation;
+    double enemyDistance;
+    double enemyAbsoluteBearing;
+    double movementLateralAngle = 0.2;
+
     public void run() {
+        setAdjustRadarForGunTurn(true);
 
-        setAdjustGunForRobotTurn(false);
-        setAdjustRadarForGunTurn(false);
-        setAdjustRadarForRobotTurn(false);
+        do {
+            turnRadarRightRadians(Double.POSITIVE_INFINITY);
+        } while (true);
+    }
 
-        while (true) {
+    public void onScannedRobot(ScannedRobotEvent e) {
+        robotLocation = new Point2D.Double(getX(), getY());
+        enemyAbsoluteBearing = getHeadingRadians() + e.getBearingRadians();
+        enemyDistance = e.getDistance();
+        enemyLocation = vectorToLocation(enemyAbsoluteBearing, enemyDistance, robotLocation);
+
+        move();
+        fire(1);
+        setTurnRadarRightRadians(Utils.normalRelativeAngle(enemyAbsoluteBearing - getRadarHeadingRadians()) * 2);
+
+        
+    }
 
 
-            setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+    void move() {
+        considerChangingDirection();
+        Point2D robotDestination = null;
+        double tries = 0;
+        do {
+            robotDestination = vectorToLocation(absoluteBearing(enemyLocation, robotLocation) + movementLateralAngle,
+                    enemyDistance * (1.1 - tries / 100.0), enemyLocation);
+            tries++;
+        } while (tries < 100 && !fieldRectangle(WALL_MARGIN).contains(robotDestination));
+        goTo(robotDestination);
+    }
 
-            // Targeting code here
+    void considerChangingDirection() {
+        // Change lateral direction at random
 
-
+        double flattenedFactor = 0.05;
+        if (Math.random() < flattenedFactor) {
+            movementLateralAngle *= -1;
         }
     }
-    public void onHitWall(HitWallEvent e) {
-        // Bounce off!
-        reverseDirection();
+
+    RoundRectangle2D fieldRectangle(double margin) {
+        return new RoundRectangle2D.Double(margin, margin,
+                getBattleFieldWidth() - margin * 2, getBattleFieldHeight() - margin * 2, 75, 75);
     }
 
-    public void reverseDirection() {
+    void goTo(Point2D destination) {
+        double angle = Utils.normalRelativeAngle(absoluteBearing(robotLocation, destination) - getHeadingRadians());
+        double turnAngle = Math.atan(Math.tan(angle));
+        setTurnRightRadians(turnAngle);
+        setAhead(robotLocation.distance(destination) * (angle == turnAngle ? 1 : -1));
 
-    }
-    /**
-     * Fire when we see a robot
-     */
-    public void onScannedRobot(ScannedRobotEvent e) {
-        // demonstrate feature of debugging properties on RobotDialog
-        setTurnRadarLeftRadians(getRadarTurnRemainingRadians());
-
-        // Targeting code here?
-        // getX(), getY()
-
-        fire(2);
+        setMaxVelocity(Math.abs(getTurnRemaining()) > 33 ? 0 : MAX_VELOCITY);
     }
 
-    /**
-     * We were hit!  Turn perpendicular to the bullet,
-     * so our seesaw might avoid a future shot.
-     * In addition, draw orange circles where we were hit.
-     */
-    public void onHitByBullet(HitByBulletEvent e) {
-        // demonstrate feature of debugging properties on RobotDialog
-        setDebugProperty("lastHitBy", e.getName() + " with power of bullet " + e.getPower() + " at time " + getTime());
-
-        // show how to remove debugging property
-        setDebugProperty("lastScannedRobot", null);
-
-        // gebugging by painting to battle view
-        Graphics2D g = getGraphics();
-
-        g.setColor(Color.orange);
-        g.drawOval((int) (getX() - 55), (int) (getY() - 55), 110, 110);
-        g.drawOval((int) (getX() - 56), (int) (getY() - 56), 112, 112);
-        g.drawOval((int) (getX() - 59), (int) (getY() - 59), 118, 118);
-        g.drawOval((int) (getX() - 60), (int) (getY() - 60), 120, 120);
-
-
-        turnLeft(90 - e.getBearing());
+    static Point2D vectorToLocation(double angle, double length, Point2D sourceLocation) {
+        return vectorToLocation(angle, length, sourceLocation, new Point2D.Double());
     }
 
-    /**
-     * Paint a red circle around our PaintingRobot
-     */
-    public void onPaint(Graphics2D g) {
-        g.setColor(Color.red);
-        g.drawOval((int) (getX() - 50), (int) (getY() - 50), 100, 100);
-        g.setColor(new Color(0, 0xFF, 0, 30));
-        g.fillOval((int) (getX() - 60), (int) (getY() - 60), 120, 120);
+    static Point2D vectorToLocation(double angle, double length, Point2D sourceLocation, Point2D targetLocation) {
+        targetLocation.setLocation(sourceLocation.getX() + Math.sin(angle) * length,
+                sourceLocation.getY() + Math.cos(angle) * length);
+        return targetLocation;
+    }
+
+    static double absoluteBearing(Point2D source, Point2D target) {
+        return Math.atan2(target.getX() - source.getX(), target.getY() - source.getY());
     }
 }
-
